@@ -1,0 +1,53 @@
+name: Publish prepared JARVIS phone release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: jarvis-phone-fallback
+  cancel-in-progress: false
+jobs:
+  publish:
+    runs-on: macos-14
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          persist-credentials: false
+      - name: Stage only verified phone shell files
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const crypto = require('node:crypto');
+          const commit = 'a3773f5a35f6dba53dc00d05c5764b042cc7c512';
+          const version = JSON.parse(fs.readFileSync('version.json', 'utf8'));
+          if (version.commit !== commit) throw new Error('Unexpected release');
+          const files = JSON.parse(Buffer.from('eyI0MDQuaHRtbCI6IjY2ODMzNjU4ZTAyNDAyZTk5Y2M0ZjNiMWNmMThlYTcxZmViZWFkMDAzZGZmY2MzNDIwY2ZhNDkyMGJhYTllNTgiLCJhc3NldHMvTW9udHNlcnJhdC1EM3d2b1MyaC53b2ZmMiI6ImExYjRkMjhhNzRmMTBmOWQzNjgzYjNmNWYzYjIxMjcwNGM3YTBmMzViYzE0N2YyMzBmODllOTUwMTlmZmZhNTgiLCJhc3NldHMvZGVjb2RlLURGY0t3SkdILmpzIjoiM2NiZDYwNzBmZGFlYzk2OGExMjliNmFlOTg0MDcyNjdkZTMzMWQ3NjZkZGU2NmNiZTgzMWI5OTRmNGFjMDY3NyIsImFzc2V0cy9pbmRleC1DdmVXcTYzRS5qcyI6IjI3ZGRjZjc3OWIyYjc5MTFiZDdhN2VhYWQzYTk5MDIxNjJkNTRkMmZhNWJiNTZkYTY3NmZmNzFjNjc5Nzk5NDkiLCJhc3NldHMvaW5kZXgtRDgyUFZKMzcuY3NzIjoiZWI5MzU4NjFjNGQwMTZmOWU5ZWFlNWM1NTI3ZmU3ZWJjYjgwNzU3NmNiZDAzZmM4MjJkNWE3NGNmODdkYzlmNSIsImljb25zL2FwcGxlLXRvdWNoLWljb24ucG5nIjoiNzY5Mjg1NTdkZDQ3ZDYyZDNmYjU4NDFiNWVhNjU1N2ViYWU2ZDdiMzMyZTY1YjBjZDI5MjkxYTcyMjMxNjhlMSIsImljb25zL2Zhdmljb24tMzIucG5nIjoiNjhjMmFiYThiOTExNjU2MDVlOTVkMWUwMmE3YzExNWNlMWUxM2FmY2QyYzgyZjczMDZlYWJmZDBjZmNiMTRkYyIsImljb25zL2ljb24tMTkyLnBuZyI6IjdkODc4ZTA2NDIzOGE0NmI3Y2Q5MTlhNzJhMzA3ZmM0ZDhiNzE5NmE1MGU3ZTNhN2Y4NjAxYWQzZGI3YjJlZTEiLCJpY29ucy9pY29uLTUxMi5wbmciOiJkYzdiNzFjZGFiZTk5ZGQ1OWZlMTlmODI4ODk3Zjc4MDRlNDEyOWUzZTEwNDk4MmY0Y2Y0M2Q5NWE5MTBiMWUzIiwiaW5kZXguaHRtbCI6IjNlYzE5N2MwMDY1M2FjYzIzZTE1ZjZhOTExYzFkMDVmOTk3MGEwZmRjMjIzZTEwN2MyMGVjYjljYjY3YWE2NGIiLCJsaWNlbnNlcy9Nb250c2VycmF0LU9GTC50eHQiOiI4YjcxNDFjMDNmYTRmOGQ0NGU2MzQ1ZDVkNDkzMTcwOTI5MGYwZjY3ODc1ZTQ1MmU5NWFjMWZkM2EwMjc4MDJlIiwibWFuaWZlc3Qud2VibWFuaWZlc3QiOiI4YzVlNGZhODk5OGZiODhlMzg4NWQ2ZjQ4Y2E4ZDhmYWNmZGFkOGYzZWM0OTU1NmJhNDM2N2JkZmM4YjhmMzJlIiwic3BsYXNoL2RhcmstMTEyNXgyNDM2LnBuZyI6IjgxN2RlMGE4MmM1NDNiMDlhMjlkOThjMWFmMDFjYmMwNjllZGIzMWQ0ZjI1MTQ2MGE3ODY0OWQ3YTk4M2JkYzIiLCJzcGxhc2gvZGFyay0xMTcweDI1MzIucG5nIjoiOGM0MGZkOGMxZGVmNzVkZjg1YzVmNTVkNjg1ZGZhYTNhYTQzMjA2NjBhNGNkMzI1YTdlZGQ1ZGI0NGVkZTNhNiIsInNwbGFzaC9kYXJrLTExNzl4MjU1Ni5wbmciOiI1YmZjYTVhOTUxZGYwN2NlODM2OWY0N2E5YjI0MzA0ODBhODgwMjc4OTkxMWQ1OTA4ZDBhYWQ1YjJjMTY1Yzc5Iiwic3BsYXNoL2RhcmstMTIwNngyNjIyLnBuZyI6IjBjY2I2YmRjZTcyM2FiYTAxOWRjN2VkMzQ5NDQ0ZThhYTAyNzA4ZTk3NTEzNDY2ZTA5ODhlNGI0NjE4YmFjOTAiLCJzcGxhc2gvZGFyay0xMjQyeDIyMDgucG5nIjoiNzlmYmZhYjIxNWU2NTI0Njc4NWIzNTEyMzgxOTk1Y2FlNjAwY2YxNjdlMTIyYmMyNWI0OWQ2Nzc0N2U1MDYxYSIsInNwbGFzaC9kYXJrLTEyNDJ4MjY4OC5wbmciOiJhOWRhMWZhYTZiNzkxN2IyMWZiOTFhOGRlYTA3NmM1ZmFiN2Y0OGM1NDM5MDk5ODM2MDM1ZWZkODZhZTA0OWZhIiwic3BsYXNoL2RhcmstMTI2MHgyNzM2LnBuZyI6IjY1MjVkNzRjOTYyYjYzZmQyYjQxYTZiNDJkNDY0YzYyMTQ3YTEwMWIwM2U5MGNkMmM2MDNlOGZjYjVkN2UwYWEiLCJzcGxhc2gvZGFyay0xMjg0eDI3NzgucG5nIjoiMzdjZmMyNmU5ZTU4YTc1YjE2MGFkZjUxYTI5ZjA4MGI3MjhkMWZiMmUyYWNhZWI1Yzg3OTRhYTU0NGExZmU1NiIsInNwbGFzaC9kYXJrLTEyOTB4Mjc5Ni5wbmciOiI4ZTJhNDJiOTU0MTQwNzRmOWIzZGIxNWUwYzBkZWNkYmE3MjVlYzc3Zjc5MWZjOWNmMTViZjg1YWVmYTFhMWJmIiwic3BsYXNoL2RhcmstMTMyMHgyODY4LnBuZyI6IjI1MTMyN2MzNTQ4ZDZiMWRjOTA5MGU4MGFmOTU2MGVhZWU1M2ZiYzA1MDRiOTJiODMzZTBlZjc0Y2Q2NjIyYTUiLCJzcGxhc2gvZGFyay03NTB4MTMzNC5wbmciOiI1MjgzMTY1ZmZmYjkyNTcyM2FhMjg2ZWI3N2Y1MWI3NDQ3M2IwN2YyNzhjMjBkNDM0NDA2NTY5NDc2MjMwOTkyIiwic3BsYXNoL2RhcmstODI4eDE3OTIucG5nIjoiOWUyNjQ5YjE4ZGEwZTY2MDY0M2M1OGEzYTE3MDBlZmQ4ZDM5NDRmZGNmZTNjMWQwZmJkODAzMTEyNzM1MmEzMyIsInNwbGFzaC9saWdodC0xMTI1eDI0MzYucG5nIjoiNmRkZWM4OWY5MGYwYWJmYmY5ODM0ODRkNjNmY2I0ZTQ4YjQ0M2E4MzIxNjBjMjFkNWMxN2Y3YTdmMTBmNmEzYSIsInNwbGFzaC9saWdodC0xMTcweDI1MzIucG5nIjoiYzBmM2ZlMzMyYjM1YmYwYjEzMjM2OGQyZGIyMTg5Mzk3MmJmZmI0ZmJlZDQ3NmU4MDEzNDdjNGE1YzgzMzM0ZCIsInNwbGFzaC9saWdodC0xMTc5eDI1NTYucG5nIjoiZWU2ZWExNjIzMDQ5ZmNlMzNhZDZjYzRiYzM0ZTQ4M2M4NGViMDVkMzBjMjEwM2YxOTg1NTE0ZWU3NTNkZGYwNyIsInNwbGFzaC9saWdodC0xMjA2eDI2MjIucG5nIjoiMTE4NWRjMDlkOTQxN2E2MmMxNjNmMzIxNGM2YmI0YzRhYTRmOWFjNTYyZjQxNWU2YTg0YTIwZmQ4ZmY4YTAyMyIsInNwbGFzaC9saWdodC0xMjQyeDIyMDgucG5nIjoiZTAxMTE5YmVhODljODNlZGU1MTA3ZGU4ZDI2NGIyZjRiNmZjNWZhMzNiNDhhOGE1YTNjZjNlZjY3ODAwM2VhYiIsInNwbGFzaC9saWdodC0xMjQyeDI2ODgucG5nIjoiZTExNGJkNjAwNjUwYzY3MDkxMWVhNzgyMTQ1OGM2MTQ5NGE2MTdiNGNiYjdiZjAzYTg1MDE3NDgyNjIwNjMzZiIsInNwbGFzaC9saWdodC0xMjYweDI3MzYucG5nIjoiMDU3ODk5Y2JiM2Y0NzllOGFmNzQ1MmUyM2U1NTE1ZWYwMjA0OTU5YzA4YTMxN2UwMWRmZGI1OTg1Nzc0YzdiMiIsInNwbGFzaC9saWdodC0xMjg0eDI3NzgucG5nIjoiYzYxODcwMWMwMzlkYWE0ZjdjZmJlNzIwMGZjMmY5NmQzNWJhOTg3MDAzMjljMjkzM2ViYjkyZjllNDhlODNlMCIsInNwbGFzaC9saWdodC0xMjkweDI3OTYucG5nIjoiMzNlNWMyYzIzMzFkOTRkMzcxZjkyZWZlYmVmZGQ4ZGM2NzQ2MzAzYWFlYmZmMjExMTY0YjUwYjY4MTMxNTU1ZiIsInNwbGFzaC9saWdodC0xMzIweDI4NjgucG5nIjoiMDBjMDA3YjA5MGE3YjBjY2FmMDE0OTQ3OGQyMDdhOWQ0OWJjOWRlYTlkNGU2Mjk2OWU1NDg1NzE1OTdmZGM3OCIsInNwbGFzaC9saWdodC03NTB4MTMzNC5wbmciOiIzNDQzOWE4OTY2YTk4MzRhM2IxNmI5MjlhMzQ5MmIwMGFiNTE3N2JmMGEzMGMzNjM3YzM1MTY0MzkyMjk4NWIwIiwic3BsYXNoL2xpZ2h0LTgyOHgxNzkyLnBuZyI6ImY0MWI3YzBlN2JiYzFiNmQwNTJhYjFkNmI0MGIyYmI1ODEwOTZlNTE4Nzg2NTcyN2JmNzU3NGQ4OTUyOGRjNDMiLCJzdy5qcyI6IjRiMDI0ZmRmZjY0MWEyN2JiYjBjYmZlZGM1YzE5YWJhMjNiYTRmYzg3NGI3MmU5ZWI5Y2ZiN2EyNTNjYWZlZDcifQ==', 'base64').toString());
+          const root = fs.realpathSync('.');
+          fs.mkdirSync('_site');
+          for (const [name, expected] of Object.entries(files)) {
+            if (!fs.lstatSync(name).isFile() || !fs.realpathSync(name).startsWith(root + path.sep))
+              throw new Error('Unexpected file: ' + name);
+            const bytes = fs.readFileSync(name);
+            if (crypto.createHash('sha256').update(bytes).digest('hex') !== expected)
+              throw new Error('Different release file: ' + name);
+            fs.mkdirSync(path.dirname(path.join('_site', name)), {recursive: true});
+            fs.writeFileSync(path.join('_site', name), bytes);
+          }
+          fs.writeFileSync('_site/version.json', JSON.stringify({commit, built: new Date().toISOString()}) + '\n');
+          console.log('Verified and staged ' + Object.keys(files).length + ' public shell files.');
+          NODE
+      - uses: actions/upload-pages-artifact@56afc609e74202658d3ffba0e8f6dda462b719fa # v3
+        with:
+          path: _site
+      - name: Publish existing phone shell
+        id: deployment
+        uses: actions/deploy-pages@d6db90164ac5ed86f2b6aed7e0febac5b3c0c03e # v4
